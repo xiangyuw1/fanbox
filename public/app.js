@@ -256,7 +256,7 @@ function gridItem(e, i) {
   el.className = 'item' + (e.hidden ? ' hidden-file' : '') + (state.selected === e.path ? ' selected' : '') + (chg ? ' changed' : '');
   el.dataset.idx = i;
   if (chg) { el.dataset.changed = chg.count > 1 ? '改·' + chg.count : '改'; if (chg.files.size) el.title = '刚变更：\n' + [...chg.files].join('\n'); }
-  el.innerHTML = `<div class="icon">${thumbHtml(e)}</div><div class="fname">${escapeHtml(e.name)}</div>${favBtn(e)}`;
+  el.innerHTML = `<div class="icon" style="--tint:${iconColorFor(e)}">${thumbHtml(e)}</div><div class="fname">${escapeHtml(e.name)}</div>${favBtn(e)}`;
   bindItem(el, e);
   return el;
 }

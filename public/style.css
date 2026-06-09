@@ -508,3 +508,18 @@ body { transition: background-color 0.28s ease, color 0.28s ease; }
 /* 排版呼吸：网格项更松、文件名行高更舒展 */
 .grid .item { padding: 14px 10px 12px; }
 .grid .fname { line-height: 1.4; }
+
+/* ---------- R4修：网格图标类型色底座（静止态自身耐看，去 web-view 感）---------- */
+.grid .item .svg-icon {
+  align-items: center; justify-content: center;
+  width: 72px; height: 72px; border-radius: 18px;
+  background: color-mix(in srgb, var(--tint, var(--text-faint)) 13%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--tint, var(--text-faint)) 22%, transparent);
+  transition: background-color 0.16s ease, transform 0.12s ease;
+}
+.grid.size-sm .item .svg-icon { width: 50px; height: 50px; border-radius: 13px; }
+.grid.size-lg .item .svg-icon { width: 100px; height: 100px; border-radius: 24px; }
+.grid .item:hover .svg-icon { background: color-mix(in srgb, var(--tint, var(--text-faint)) 20%, transparent); transform: translateY(-1px); }
+/* 列表视图排版与网格对齐呼吸 */
+.list .row { padding-top: 9px; padding-bottom: 9px; }
+.list .row .fname { line-height: 1.4; }
