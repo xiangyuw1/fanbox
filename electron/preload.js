@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld('fanboxDrop', {
   saveTemp: (name, buf) => ipcRenderer.invoke('drop:save', { name, buf }),
 });
 
+contextBridge.exposeInMainWorld('fanboxUpdate', {
+  onAvailable: (cb) => { const h = (e, m) => cb(m); ipcRenderer.on('update:available', h); return () => ipcRenderer.removeListener('update:available', h); },
+  open: (url) => ipcRenderer.invoke('update:open', { url }),
+});
+
 contextBridge.exposeInMainWorld('fanboxEnv', {
   isDesktopApp: true,
   platform: process.platform,

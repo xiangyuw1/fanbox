@@ -2463,5 +2463,19 @@ async function init() {
   // 恢复上次终端开合状态（dock 方位已由 applyDock 自带记忆）
   if (localStorage.getItem('fb_term_open') === '1' && term.available()) term.open();
   maybeShowGuide();
+  bindUpdateNotice();
+}
+// 新版本提示：主进程查到 GitHub 有新 Release 时右下角弹胶囊，引导去下载页（不强更不打扰）
+function bindUpdateNotice() {
+  if (!window.fanboxUpdate) return;
+  window.fanboxUpdate.onAvailable(({ version, url }) => {
+    if (localStorage.getItem('fb_skip_ver') === version || document.querySelector('.update-pill')) return;
+    const bar = document.createElement('div');
+    bar.className = 'update-pill';
+    bar.innerHTML = `<span>新版本 v${escapeHtml(version)} 已发布</span><button class="up-go">下载</button><button class="up-x" title="这个版本不再提醒">✕</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector('.up-go').onclick = () => { window.fanboxUpdate.open(url); bar.remove(); };
+    bar.querySelector('.up-x').onclick = () => { localStorage.setItem('fb_skip_ver', version); bar.remove(); };
+  });
 }
 init();

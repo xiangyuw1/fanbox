@@ -5,7 +5,7 @@
  * 复用零依赖后端 server.js（文件能力），叠加 node-pty 内嵌终端，
  * 让 TUI coding agent（Claude Code / Codex / Aider…）在界面里直接跑起来。
  */
-const { app, BrowserWindow, ipcMain, shell, nativeImage, Menu, clipboard, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, nativeImage, Menu, clipboard, dialog, net } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
@@ -80,7 +80,34 @@ app.whenReady().then(() => {
   app.setName('翻箱 FanBox');
   buildMenu();
   createWindow();
+  // 启动 6 秒后查一次新版本（不挡启动），长开会话每 12 小时再查
+  setTimeout(checkUpdate, 6000);
+  setInterval(checkUpdate, 12 * 3600 * 1000);
 });
+
+// ---------- 更新检测：查 GitHub Releases，有新版本通知渲染层引导下载 ----------
+// 现阶段只做「检测 + 引导」：Apple Development 签名过不了 Squirrel.Mac 的校验，
+// electron-updater 全自动更新要等升级 Developer ID 后再换
+function cmpVer(a, b) {
+  const pa = String(a).replace(/^v/, '').split('.').map(Number);
+  const pb = String(b).replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) { const d = (pa[i] || 0) - (pb[i] || 0); if (d) return d; }
+  return 0;
+}
+async function checkUpdate() {
+  try {
+    const res = await net.fetch('https://api.github.com/repos/alchaincyf/fanbox/releases/latest', {
+      headers: { 'User-Agent': 'fanbox-app', Accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) return;
+    const rel = await res.json();
+    const latest = rel.tag_name || '';
+    if (latest && cmpVer(latest, app.getVersion()) > 0 && win && !win.isDestroyed()) {
+      win.webContents.send('update:available', { version: latest.replace(/^v/, ''), url: rel.html_url });
+    }
+  } catch { /* 离线/被墙：静默，下次再查 */ }
+}
+ipcMain.handle('update:open', (e, { url }) => { if (/^https:\/\/github\.com\//.test(String(url))) shell.openExternal(url); });
 
 // 原生菜单——关键是 Edit role，终端里的 ⌘C/⌘V 才生效
 function buildMenu() {
