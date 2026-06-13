@@ -1,6 +1,6 @@
 {
   "name": "fanbox",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "description": "FanBox — the cockpit for vibe coding. Browse/search/preview/edit local files, command coding agents from the built-in terminal.",
   "bin": {
     "fanbox": "server.js"

@@ -522,7 +522,15 @@ function onItemClick(e) {
   openPreview(e);
   recordRecent(e.path);
 }
-function onItemOpen(e) { if (e.isDir) navigate(e.path); else openWith(e.path, 'default'); }
+function onItemOpen(e) {
+  if (e.isDir) return navigate(e.path);
+  // 文本（md/html/代码）双击 =「正经看/改这文件」→ 全屏预览；其它类型仍交系统默认 App 打开。
+  // 单击已经预览过同一文件，这里只负责放大，避免重复加载编辑器。
+  if ((e.kind || kindFromName(e.name)) === 'text') {
+    if (state.selected !== e.path) { applySelection(e.path); openPreview(e); recordRecent(e.path); }
+    setPreviewMax(true);
+  } else { openWith(e.path, 'default'); }
+}
 
 // ---------- 主区键盘导航 ----------
 function highlightCursor() {
@@ -572,8 +580,13 @@ async function openPreview(e) {
   } else if (k === 'pdf') {
     body.innerHTML = `<iframe class="iframe-preview" src="/api/raw?path=${encodeURIComponent(e.path)}"></iframe>`;
   } else if (k === 'text') {
-    if (isMdName(e.name)) return enterEditMode(e); // md 预览即编辑：打开就是所见即所得，自动保存
-    renderTextPreview(await api('/api/read?path=' + encodeURIComponent(e.path)));
+    // 代码/文本「预览即编辑」：像 md 一样默认进可编辑态，不用再点编辑按钮。
+    // html 例外（给人看的是渲染形态）、csv/tsv 例外（表格视图更有用）→ 仍走只读渲染。
+    if (isHtmlName(e.name) || /\.(csv|tsv)$/i.test(e.name)) {
+      renderTextPreview(await api('/api/read?path=' + encodeURIComponent(e.path)));
+    } else {
+      return enterEditMode(e); // md/代码/纯文本：打开即可编辑、自动保存守卫
+    }
   } else if (k === 'archive') {
     const d = await api('/api/archive?path=' + encodeURIComponent(e.path));
     if (!d.ok) {
@@ -1196,8 +1209,7 @@ async function enterEditMode(e) {
   const data = await api('/api/read?path=' + encodeURIComponent(e.path));
   if (data.tooLarge) {
     toast('文件太大，暂不支持原地编辑', true);
-    if (isMdName(e.name)) { renderTextPreview(data); return; } // md 预览即编辑，回 openPreview 会循环
-    openPreview(e); return;
+    renderTextPreview(data); return; // 统一回退只读渲染；代码也默认进编辑态了，回 openPreview 会死循环
   }
   if (isMdName(e.name)) return mdEditor(e, data); // md：所见即所得 + 自动保存 + 源码切换
   const ex = (data.ext || '').toLowerCase();
@@ -2347,6 +2359,8 @@ const term = {
     await navigate(dirOf(r.path));
     const e = state.entries.find((x) => x.path === r.path) || { path: r.path, name: baseOf(r.path), kind: 'text', isDir: false };
     applySelection(r.path); openPreview(e); recordRecent(r.path);
+    // md/html 是「写给人看」的：点开即全屏，最贴合「我想看看这文件长啥样」的意图（代码等退回常规分栏）
+    setPreviewMax(isMdName(r.path) || isHtmlName(r.path));
     toast(r.viaSearch ? '未精确命中，已打开最接近的「' + baseOf(r.path) + '」' : (r.viaScrollback ? '已按会话里出现过的路径打开' : '已打开'));
   },
   // 从 fromRow 往上回扫 scrollback（最多 2000 物理行），收集含该 basename 的绝对路径（/ 或 ~ 开头，
@@ -3129,7 +3143,7 @@ function isNoisyChange(filename) {
   if (segs.some((s) => CHANGE_IGNORE.has(s) || s.startsWith('.'))) return true;
   const name = segs[segs.length - 1];
   return !name || name.endsWith('~') || name.endsWith('.swp')
-    || /\.(tmp|part|crdownload|lock)$|-(journal|shm|wal)$/i.test(name); // sqlite 等后台 App 的临时 sidecar
+    || /\.(tmp|part|crdownload|lock)(\.|$)|-(journal|shm|wal)$/i.test(name); // .tmp 可能在中段：原子写 foo.swift.tmp.<pid>.<hex>，sqlite 等后台 App 的临时 sidecar
 }
 function recordChange(dir, filename) {
   if (isNoisyChange(filename)) return; // 过滤构建/依赖/系统噪声
