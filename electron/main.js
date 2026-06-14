@@ -283,7 +283,16 @@ ipcMain.handle('pty:spawn', (e, { id, cwd, cols, rows }) => {
     });
   } catch (err) { return { ok: false, error: err.message }; }
   terminals.set(id, p);
-  p.onData((data) => { if (win && !win.isDestroyed()) win.webContents.send('pty:data', { id, data }); });
+  p._cwd = startCwd; // 在 Windows 上通过 prompt 解析追踪 cwd（lsof 不可用）
+  p.onData((data) => {
+    if (win && !win.isDestroyed()) win.webContents.send('pty:data', { id, data });
+    // Windows：从 PowerShell prompt 提取 cwd（默认 prompt 格式 "PS D:\path>"）
+    if (process.platform === 'win32') {
+      const stripped = String(data).replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '');
+      const m = stripped.match(/PS\s+([A-Za-z]:\\[^\r\n>]*?)\s*>/) || stripped.match(/PS\s+([A-Za-z]:\/[^\r\n>]*?)\s*>/);
+      if (m) p._cwd = m[1].replace(/\\/g, path.sep);
+    }
+  });
   p.onExit(({ exitCode }) => {
     terminals.delete(id);
     if (win && !win.isDestroyed()) win.webContents.send('pty:exit', { id, exitCode });
@@ -297,8 +306,14 @@ ipcMain.handle('clip:image', (e, { path: p }) => {
 });
 ipcMain.handle('clip:file', (e, { path: p }) => new Promise((resolve) => {
   const { execFile } = require('child_process');
-  // argv 传路径，避免拼进 AppleScript 字面量被注入
-  execFile('osascript', ['-e', 'on run argv', '-e', 'set the clipboard to (POSIX file (item 1 of argv))', '-e', 'end run', p], (err) => resolve({ ok: !err, error: err && err.message }));
+  if (process.platform === 'darwin') {
+    execFile('osascript', ['-e', 'on run argv', '-e', 'set the clipboard to (POSIX file (item 1 of argv))', '-e', 'end run', p], (err) => resolve({ ok: !err, error: err && err.message }));
+  } else if (process.platform === 'win32') {
+    const ps = p.replace(/'/g, "''");
+    execFile('powershell', ['-NoProfile', '-Command', `Set-Clipboard -Path '${ps}'`], (err) => resolve({ ok: !err, error: err && err.message }));
+  } else {
+    resolve({ ok: false, error: '不支持的平台' });
+  }
 }));
 
 // 拖拽落盘：file-promise 类拖入（截图浮窗等）没有真实路径，把字节写进临时目录换路径
@@ -365,6 +380,9 @@ function decodeLsofPath(s) {
 ipcMain.handle('pty:cwd', (e, { id }) => new Promise((resolve) => {
   const p = terminals.get(id);
   if (!p || !p.pid) return resolve({ ok: false });
+  if (process.platform === 'win32') {
+    return resolve(p._cwd ? { ok: true, cwd: p._cwd } : { ok: false });
+  }
   const { exec } = require('child_process');
   exec(`lsof -a -p ${p.pid} -d cwd -Fn`, { env: { ...process.env, LC_ALL: 'en_US.UTF-8' } }, (err, stdout) => {
     if (err) return resolve({ ok: false });
@@ -373,7 +391,7 @@ ipcMain.handle('pty:cwd', (e, { id }) => new Promise((resolve) => {
   });
 }));
 
-// 取终端前台进程名（node-pty 维护）：判断当前是裸 shell 还是正跑着 claude/codex 等程序
+// 取终端前台进程名（node-pty 维护）：判断当前是裸 shell 还是正跑着 claude/codex/opencode/mimo 等程序
 ipcMain.handle('pty:proc', (e, { id }) => {
   const p = terminals.get(id);
   return p ? { ok: true, proc: p.process || '' } : { ok: false };

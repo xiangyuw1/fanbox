@@ -16,6 +16,9 @@ const crypto = require('crypto');
 const { exec, spawn, execFile } = require('child_process');
 const { URL } = require('url');
 
+let DatabaseSync;
+try { DatabaseSync = require('node:sqlite').DatabaseSync; } catch { /* older Node.js without node:sqlite */ }
+
 const HOME = os.homedir();
 const PORT = Number(process.env.FANBOX_PORT) || 4567;
 const CONFIG_DIR = path.join(HOME, '.fanbox');
@@ -511,10 +514,18 @@ async function codexOrganizeFlags(bin) {
 async function findAgentBin(name) {
   // GUI 启动的 app 没有用户 shell 的 PATH，走登录 shell 找一次绝对路径
   return new Promise((resolve) => {
-    execFile('/bin/zsh', ['-lc', `command -v ${name}`], { timeout: 8000 }, (err, stdout) => {
-      const out = String(stdout || '').trim().split('\n').pop();
-      resolve(!err && out && out.startsWith('/') ? out : null);
-    });
+    if (PLATFORM === 'win32') {
+      // Windows: where 是 cmd 内建命令，通过 cmd /c where 调用
+      execFile('cmd', ['/c', 'where', name], { timeout: 8000 }, (err, stdout) => {
+        const out = String(stdout || '').trim().split('\n').shift();
+        resolve(!err && out && (out.includes('\\') || out.includes('/')) ? out : null);
+      });
+    } else {
+      execFile('/bin/zsh', ['-lc', `command -v ${name}`], { timeout: 8000 }, (err, stdout) => {
+        const out = String(stdout || '').trim().split('\n').pop();
+        resolve(!err && out && out.startsWith('/') ? out : null);
+      });
+    }
   });
 }
 
@@ -539,13 +550,16 @@ async function organizeHistory() {
 async function organizeLaunch(b) {
   const dir = resolvePath(b.path);
   const cfg = await readConfig();
-  let engine = cfg.organizeEngine === 'codex' ? 'codex' : 'claude';
+  const engines = ['claude', 'codex', 'opencode', 'mimo'];
+  let engine = engines.includes(cfg.organizeEngine) ? cfg.organizeEngine : 'claude';
   let bin = await findAgentBin(engine);
   if (!bin) {
-    const alt = engine === 'claude' ? 'codex' : 'claude';
-    bin = await findAgentBin(alt);
-    if (bin) engine = alt;
-    else return { ok: false, error: '没找到 claude / codex 命令——AI 整理需要装其中一个 CLI' };
+    for (const alt of engines) {
+      if (alt === engine) continue;
+      bin = await findAgentBin(alt);
+      if (bin) { engine = alt; break; }
+    }
+    if (!bin) return { ok: false, error: '没找到 claude / codex / opencode / mimo 命令——AI 整理需要装其中一个 CLI' };
   }
   const prefs = await fsp.readFile(ORGANIZE_PREFS_FILE, 'utf8').catch(() => '');
   const history = await organizeHistory();
@@ -578,10 +592,17 @@ ${history || '（还没有历史记录）'}
   await fsp.mkdir(ORGANIZE_LOG_DIR, { recursive: true });
   await fsp.writeFile(ORGANIZE_BRIEF_FILE, brief, 'utf8');
   const kickoff = `先完整读 ${ORGANIZE_BRIEF_FILE}，然后按里面的约定，和我对话式整理当前文件夹`;
-  // claude 跳权限确认（动手前方案已过人）；codex 旗标按当前版本实测拼出
-  const cmd = engine === 'codex'
-    ? `codex${await codexOrganizeFlags(bin)} "${kickoff}"`
-    : `claude --dangerously-skip-permissions "${kickoff}"`;
+  // claude 跳权限确认（动手前方案已过人）；codex 旗标按当前版本实测拼出；opencode/mimo 直接启动交互式 TUI
+  let cmd;
+  if (engine === 'codex') {
+    cmd = `codex${await codexOrganizeFlags(bin)} "${kickoff}"`;
+  } else if (engine === 'opencode') {
+    cmd = `opencode "${kickoff}"`;
+  } else if (engine === 'mimo') {
+    cmd = `mimo "${kickoff}"`;
+  } else {
+    cmd = `claude --dangerously-skip-permissions "${kickoff}"`;
+  }
   return { ok: true, engine, cmd };
 }
 
@@ -742,6 +763,40 @@ async function parseCodexSession(fp, st) {
   return sess;
 }
 
+const ocSessCache = new Map(); // dir -> { mtime, sessions }
+function parseOpenCodeOrMimoSessions(dbPath, dir, agent) {
+  if (!DatabaseSync) return [];
+  const cacheKey = agent + ':' + dir;
+  const cached = ocSessCache.get(cacheKey);
+  try {
+    const st = fs.statSync(dbPath);
+    if (cached && cached.mtime === st.mtimeMs) return cached.sessions;
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    const rows = db.prepare('SELECT id, title, time_created, time_updated FROM session WHERE directory = ? ORDER BY time_updated DESC').all(dir);
+    const sessions = [];
+    for (const r of rows) {
+      let userMsgs = 0, title = r.title || '';
+      try {
+        const msgRows = db.prepare("SELECT data FROM message WHERE session_id = ? AND json_extract(data, '$.role') = 'user'").all(r.id);
+        userMsgs = msgRows.length;
+        if (!title && msgRows.length) {
+          try {
+            const d = JSON.parse(msgRows[0].data);
+            const parts = d.parts || d.content || [];
+            for (const p of parts) {
+              if (p.type === 'text' && p.text) { title = p.text.slice(0, 160); break; }
+            }
+          } catch { /* */ }
+        }
+      } catch { /* */ }
+      sessions.push({ id: r.id, agent, title, firstT: r.time_created || 0, lastT: r.time_updated || 0, userMsgs, files: [], skills: [] });
+    }
+    db.close();
+    ocSessCache.set(cacheKey, { mtime: st.mtimeMs, sessions });
+    return sessions;
+  } catch { return []; }
+}
+
 async function projectMemory(p) {
   const cwd = resolvePath(p);
   const sessions = [];
@@ -775,6 +830,10 @@ async function projectMemory(p) {
       try { if ((await readCwdFromHead(fp, 16384)) === cwd) sessions.push(await parseCodexSession(fp, st)); } catch { /* */ }
     }
   } catch { /* 没用过 Codex */ }
+  // OpenCode: SQLite DB 按 directory 匹配
+  sessions.push(...parseOpenCodeOrMimoSessions(path.join(OPENCODE_DATA, 'opencode.db'), cwd, 'opencode'));
+  // MiMo Code: SQLite DB 按 directory 匹配
+  sessions.push(...parseOpenCodeOrMimoSessions(path.join(MIMOCODE_DATA, 'mimocode.db'), cwd, 'mimo'));
   // 没有正经标题的会话（纯 warmup / 空会话）沉底，按最近活跃排
   sessions.sort((a, b) => (b.title ? 1 : 0) - (a.title ? 1 : 0) || b.lastT - a.lastT);
   sessions.sort((a, b) => b.lastT - a.lastT);
@@ -911,7 +970,7 @@ async function termVerify(b) {
   const results = await Promise.all(items.map(async (it) => {
     if (!it || typeof it.cand !== 'string') return false;
     let p = it.cand;
-    if (!p.startsWith('/') && !p.startsWith('~')) p = cwd.replace(/\/$/, '') + '/' + p.replace(/^\.\//, '');
+    if (!p.startsWith('/') && !p.startsWith('~') && !/^[A-Za-z]:[\\\/]/.test(p)) p = cwd.replace(/[\\\/]$/, '') + path.sep + p.replace(/^\.[\\\/]/, '');
     return !!(await statWithTail(p, it.tail || ''));
   }));
   return { ok: true, results };
@@ -1088,6 +1147,13 @@ function defaultRoots() {
     ['项目 / Projects', path.join(HOME, 'Projects')],
     ['Developer', path.join(HOME, 'Developer')],
   ];
+  if (PLATFORM === 'win32') {
+    for (let d = 'A'.charCodeAt(0); d <= 'Z'.charCodeAt(0); d++) {
+      const letter = String.fromCharCode(d);
+      const root = letter + ':\\';
+      try { if (fs.statSync(root).isDirectory()) candidates.push([letter + ' 盘', root]); } catch { /* 不存在 */ }
+    }
+  }
   return candidates
     .filter(([, p]) => { try { return fs.statSync(p).isDirectory(); } catch { return false; } })
     .map(([name, p]) => ({ name, path: p }));
@@ -1291,6 +1357,8 @@ function readBody(req) {
 // Codex：~/.codex/sessions/**/rollout-*.jsonl 的 token_count 事件带 rate_limits（5h 窗口/周配额百分比，官方数）→ tail 取最新快照
 const CLAUDE_PROJ = path.join(HOME, '.claude', 'projects');
 const CODEX_SESS = path.join(HOME, '.codex', 'sessions');
+const OPENCODE_DATA = path.join(HOME, '.local', 'share', 'opencode');
+const MIMOCODE_DATA = path.join(HOME, '.local', 'share', 'mimocode');
 const claudeFileCache = new Map(); // file -> { offset, lastMsgId, events: [{t, in, out, cc, cr}] }
 let usageResultCache = { at: 0, data: null };
 
@@ -1533,6 +1601,26 @@ async function agentProjects() {
       try { add(await readCwdFromHead(f.fp, 16384), f.mtimeMs, 'codex'); } catch { /* */ }
     }));
   } catch { /* 没用过 Codex */ }
+  // OpenCode：读 SQLite DB
+  if (DatabaseSync) {
+    try {
+      const db = new DatabaseSync(path.join(OPENCODE_DATA, 'opencode.db'), { readOnly: true });
+      const rows = db.prepare('SELECT directory, time_updated FROM session WHERE directory IS NOT NULL AND directory != ?').all(HOME);
+      db.close();
+      for (const r of rows) {
+        if (r.time_updated >= cutoff) add(r.directory, r.time_updated, 'opencode');
+      }
+    } catch { /* 没用过 OpenCode */ }
+    // MiMo Code：读 SQLite DB
+    try {
+      const db = new DatabaseSync(path.join(MIMOCODE_DATA, 'mimocode.db'), { readOnly: true });
+      const rows = db.prepare('SELECT directory, time_updated FROM session WHERE directory IS NOT NULL AND directory != ?').all(HOME);
+      db.close();
+      for (const r of rows) {
+        if (r.time_updated >= cutoff) add(r.directory, r.time_updated, 'mimo');
+      }
+    } catch { /* 没用过 MiMo Code */ }
+  }
   // 按最近活跃排序，已被删除的项目目录剔掉
   const sorted = [...map.entries()].sort((a, b) => b[1].lastActive - a[1].lastActive);
   const projects = [];
@@ -1726,6 +1814,12 @@ async function skillsData() {
   await scanSkillRoot(CLAUDE_SKILLS, 'claude', '~/.claude', items);
   await scanSkillRoot(CODEX_SKILLS, 'codex', '~/.codex', items);
   await scanSkillRoot(AGENTS_SKILLS, 'agents', '~/.agents', items);
+  // OpenCode skills
+  const OPENCODE_SKILLS = path.join(HOME, '.config', 'opencode', 'skills');
+  await scanSkillRoot(OPENCODE_SKILLS, 'opencode', '~/.config/opencode', items);
+  // MiMo Code skills
+  const MIMOCODE_SKILLS = path.join(HOME, '.local', 'share', 'mimocode', 'compose');
+  await scanSkillRoot(MIMOCODE_SKILLS, 'mimo', '~/.local/share/mimocode', items);
   // Claude 插件自带的 skills
   try {
     const inst = JSON.parse(await fsp.readFile(path.join(HOME, '.claude', 'plugins', 'installed_plugins.json'), 'utf8'));
@@ -1778,7 +1872,7 @@ async function skillsData() {
   const data = {
     ok: true, at: Date.now(),
     items,
-    roots: { claude: CLAUDE_SKILLS, codex: CODEX_SKILLS, agents: AGENTS_SKILLS },
+    roots: { claude: CLAUDE_SKILLS, codex: CODEX_SKILLS, agents: AGENTS_SKILLS, opencode: OPENCODE_SKILLS, mimo: MIMOCODE_SKILLS },
     overview: {
       total: items.filter((it) => !it.residue).length,
       unique: new Set(items.filter((it) => !it.residue).map((it) => it.name)).size,
@@ -1844,7 +1938,7 @@ async function agentUsage() {
     claudeOfficialLimits().catch(() => null),
   ]);
   const claudeOut = (claude || claudeLimits) ? { ...(claude || {}), official: claudeLimits } : null;
-  const data = { ok: true, at: Date.now(), claude: claudeOut, codex };
+  const data = { ok: true, at: Date.now(), claude: claudeOut, codex, opencode: null, mimo: null };
   usageResultCache = { at: Date.now(), data };
   return data;
 }

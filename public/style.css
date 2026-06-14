@@ -153,6 +153,8 @@ kbd {
 .agent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
 .agent-dot.claude { background: #d97757; }
 .agent-dot.codex { background: #10a37f; }
+.agent-dot.opencode { background: #7c5cfc; }
+.agent-dot.mimo { background: #ff6b35; }
 .brand .logo { color: var(--accent); }
 /* ---------- Skills 透视入口（侧栏底部工具簇）---------- */
 #skills-entry { margin-top: auto; padding: 12px 16px 0; border-top: 1px solid var(--border); cursor: pointer; user-select: none; }
@@ -577,6 +579,8 @@ kbd {
 .mem-head { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; }
 .mem-agent { flex: none; min-width: 20px; height: 18px; padding: 0 3px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 10px; font-weight: 800; background: var(--accent-soft); color: var(--accent); margin-top: 1px; }
 .mem-agent.codex { background: var(--bg-3); color: var(--text-dim); }
+.mem-agent.opencode { background: #7c5cfc22; color: #7c5cfc; }
+.mem-agent.mimo { background: #ff6b3522; color: #ff6b35; }
 .mem-title { flex: 1; font-size: 12.5px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mem-resume { flex: none; font-size: 11px; padding: 3px 8px; }
 .mem-meta { font-size: 11px; color: var(--text-faint); margin: 4px 0 0 28px; }
@@ -1045,6 +1049,8 @@ body { transition: background-color 0.28s ease, color 0.28s ease; }
 .sk-name .ds { font-size: 11px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .sk-src { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; justify-self: start; background: var(--bg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 118px; }
 .sk-src.codex { color: #3b8a6e; border-color: #3b8a6e55; }
+.sk-src.opencode { color: #7c5cfc; border-color: #7c5cfc55; }
+.sk-src.mimo { color: #ff6b35; border-color: #ff6b3555; }
 .sk-src.proj { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 .sk-src.plugin { color: #8a6db1; border-color: #8a6db155; }
 .sk-hits { text-align: right; font-family: var(--font-display); font-size: 17px; font-variant-numeric: tabular-nums; font-weight: 550; }

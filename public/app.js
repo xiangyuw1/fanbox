@@ -1479,13 +1479,13 @@ async function memoryPanel(dirPath) {
   const d = await api('/api/project-memory?path=' + encodeURIComponent(dirPath));
   const body = ov.querySelector('.mem-body');
   if (!d.ok || !d.sessions.length) {
-    body.innerHTML = '<div class="empty-state">这个文件夹还没有 agent 会话记录<br><br><span class="usage-sub">在这里跑过 Claude Code / Codex 之后，历史会话会出现在这里</span></div>';
+    body.innerHTML = '<div class="empty-state">这个文件夹还没有 agent 会话记录<br><br><span class="usage-sub">在这里跑过 Claude Code / Codex / OpenCode / MiMo 之后，历史会话会出现在这里</span></div>';
     return;
   }
   body.innerHTML = d.sessions.map((s, i) => `
     <div class="mem-sess">
       <div class="mem-head" data-i="${i}">
-        <span class="mem-agent${s.agent === 'codex' ? ' codex' : ''}">${s.agent === 'codex' ? '>_' : 'C'}</span>
+        <span class="mem-agent${s.agent === 'codex' ? ' codex' : ''}${s.agent === 'opencode' ? ' opencode' : ''}${s.agent === 'mimo' ? ' mimo' : ''}">${s.agent === 'codex' ? '>_' : s.agent === 'opencode' ? 'OC' : s.agent === 'mimo' ? 'Mi' : 'C'}</span>
         <span class="mem-title">${escapeHtml(s.title || '（无标题会话）')}</span>
         <button class="ghost-btn mem-resume" data-i="${i}" title="在内嵌终端里接上这段会话的上下文继续">▶ 续上</button>
       </div>
@@ -1502,7 +1502,11 @@ async function memoryPanel(dirPath) {
   body.querySelectorAll('.mem-resume').forEach((b) => {
     b.onclick = () => {
       const s = d.sessions[Number(b.dataset.i)];
-      const cmd = s.agent === 'codex' ? `codex resume ${s.id}` : `claude --dangerously-skip-permissions --resume ${s.id}`;
+      let cmd;
+      if (s.agent === 'codex') cmd = `codex resume ${s.id}`;
+      else if (s.agent === 'opencode') cmd = `opencode -s ${s.id}`;
+      else if (s.agent === 'mimo') cmd = `mimo -s ${s.id}`;
+      else cmd = `claude --dangerously-skip-permissions --resume ${s.id}`;
       close();
       term.runInDir(dirPath, cmd, '已在终端续上会话');
     };
@@ -1524,7 +1528,7 @@ async function memoryPanel(dirPath) {
 async function organizeLaunch(dirPath) {
   const r = await apiPost('/api/organize/launch', { path: dirPath });
   if (!r.ok) { toast(r.error || 'AI 整理启动失败', true); return; }
-  term.runInDir(dirPath, r.cmd, `${r.engine === 'codex' ? 'Codex' : 'Claude'} 已开聊——先摊方案，你点头它才动手`);
+  term.runInDir(dirPath, r.cmd, `${({ codex: 'Codex', opencode: 'OpenCode', mimo: 'MiMo', claude: 'Claude' })[r.engine] || 'Claude'} 已开聊——先摊方案，你点头它才动手`);
 }
 
 // 发版向导：版本号 + 发布说明（预填 CHANGELOG 的 Unreleased 段）→ 命令序列在内嵌终端跑，每步可见可拦
@@ -1999,6 +2003,8 @@ function bindEvents() {
   $('#btn-terminal').onclick = () => term.toggle();
   $('#term-claude').onclick = () => term.launchAgent('claude --dangerously-skip-permissions');
   $('#term-codex').onclick = () => term.launchAgent('codex');
+  $('#term-opencode').onclick = () => term.launchAgent('opencode');
+  $('#term-mimo').onclick = () => term.launchAgent('mimo');
   usagePanel.bind();
   shotTray.init();
   $('#skills-entry').onclick = () => skillsView.show();
@@ -2174,7 +2180,7 @@ function applyTheme(skin, rerender = true) {
 // ---------- 内嵌终端（仅桌面 app；浏览器版优雅降级）----------
 // agent「等你拍板」界面特征（claude code 2.1.x / codex 0.13x 实测文案，宁缺勿滥：
 // 不命中只是退化成「任务完成」标题，不会漏响）
-const TERM_ASK_RE = /(Do you want to (proceed|continue|make this edit|allow|use this)|Would you like to proceed|Ready to code\?|created or one you trust\?|tell (Claude|Codex) what to do differently|Yes, and don't ask again|Allow Codex to (run|apply|create)|Codex wants to|[❯›][ \t]*1\.[ \t]*Yes)/;
+const TERM_ASK_RE = /(Do you want to (proceed|continue|make this edit|allow|use this)|Would you like to proceed|Ready to code\?|created or one you trust\?|tell (Claude|Codex) what to do differently|Yes, and don't ask again|Allow Codex to (run|apply|create)|Codex wants to|[❯›][ \t]*1\.[ \t]*Yes|Do you want to continue\?|Approve\?|Confirm\?)/;
 const term = {
   sessions: [], seq: 0, active: null, maximized: false,
   dock: localStorage.getItem('fb_term_dock') || 'bottom',
@@ -2328,12 +2334,13 @@ const term = {
     let p = String(raw).replace(/^['"]+/, '').replace(/[)\]'"`,:;]+$/, '');
     let cwd = state.cwd;
     let candidate = p;
-    const isRel = !p.startsWith('/') && !p.startsWith('~');
+    const isAbsWin = /^[A-Za-z]:[\\\/]/.test(p);
+    const isRel = !p.startsWith('/') && !p.startsWith('~') && !isAbsWin;
     if (isRel) {
       try { const r = await window.fanboxPty.cwd(id); if (r && r.ok && r.cwd) cwd = r.cwd; } catch { /* */ }
-      candidate = (cwd || '').replace(/\/$/, '') + '/' + p.replace(/^\.\//, '');
+      candidate = (cwd || '').replace(/[\\\/]$/, '') + (state.sep || '/') + p.replace(/^\.[\\\/]/, '');
     }
-    const name = p.split('/').pop();
+    const name = p.split(/[\\\/]/).pop();
     // 回扫 scrollback：agent 生成文件时几乎总打印过全路径（裸文件名常常不在 cwd 下），比模糊搜索可信
     const alt = isRel ? this.scanScrollbackFor(id, name, rowHint) : '';
     // 活跃项目根（浏览目录 + 各终端项目目录）作 basename 搜索的额外根
@@ -2357,7 +2364,7 @@ const term = {
     if (!s || !name) return '';
     const buf = s.xterm.buffer.active;
     const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp('(?:~|/)(?:[^\\s\'"`()]*/)?' + esc + '(?=$|[\\s\'"`)\\],:;。，）】、？！；：])', 'gu');
+    const re = new RegExp('(?:~|[A-Za-z]:[\\\\/]|/)(?:[^\\s\'"`()]*[\\\\/])?' + esc + '(?=$|[\\s\'"`)\\],:;。，）】、？！；：])', 'gu');
     const hits = [];
     let row = Math.min(fromRow == null ? buf.length - 1 : fromRow, buf.length - 1);
     let budget = 2000;
@@ -2805,7 +2812,7 @@ const usagePanel = {
         <div class="usage-sub">token 总量 · 本地会话日志统计</div>`;
       }
     }
-    if (!d.codex && !d.claude) h = '<div class="usage-sub">没找到 Claude Code / Codex 的本机会话记录</div>';
+    if (!d.codex && !d.claude && !d.opencode && !d.mimo) h = '<div class="usage-sub">没找到 Claude Code / Codex / OpenCode / MiMo 的本机会话记录</div>';
     box.innerHTML = h;
   },
   async refresh() {
@@ -2843,7 +2850,7 @@ const skillsView = {
     try { this.data = await api('/api/skills'); if (state.skillsMode) this.render(); } catch { /* */ }
   },
   srcTag(it) {
-    const cls = { claude: '', codex: ' codex', agents: ' codex', plugin: ' plugin', project: ' proj' }[it.source] || '';
+    const cls = { claude: '', codex: ' codex', agents: ' codex', opencode: ' opencode', mimo: ' mimo', plugin: ' plugin', project: ' proj' }[it.source] || '';
     return `<span class="sk-src${cls}">${escapeHtml(it.label)}</span>`;
   },
   ago(t) {
@@ -2860,6 +2867,8 @@ const skillsView = {
     else if (f === 'bad') arr = arr.filter((x) => x.issues.length);
     else if (f === 'project') arr = arr.filter((x) => x.source === 'project');
     else if (f === 'codex') arr = arr.filter((x) => x.source === 'codex' || x.source === 'agents');
+    else if (f === 'opencode') arr = arr.filter((x) => x.source === 'opencode');
+    else if (f === 'mimo') arr = arr.filter((x) => x.source === 'mimo');
     else if (f !== 'all') arr = arr.filter((x) => x.source === f);
     const ho = (x) => (x.residue || x.issues.length ? 0 : x.disabled ? 1 : 2);
     if (this.sort === 'hits') arr.sort((a, b) => b.hits - a.hits || b.last - a.last || a.name.localeCompare(b.name));
@@ -2893,6 +2902,8 @@ const skillsView = {
              ['project', '项目', cnt((x) => x.source === 'project')],
              ['plugin', '插件', cnt((x) => x.source === 'plugin')],
              ['codex', 'Codex', cnt((x) => x.source === 'codex' || x.source === 'agents')],
+             ['opencode', 'OpenCode', cnt((x) => x.source === 'opencode')],
+             ['mimo', 'MiMo', cnt((x) => x.source === 'mimo')],
              ['dup', '跨端重复', cnt((x) => x.copies)],
              ['bad', '仅看问题', o.issues]]
             .map(([k, lbl, n]) => `<button class="sk-chip ${this.filter === k ? 'on' : ''}" data-f="${k}">${lbl} <i>${n}</i></button>`).join('')}
@@ -3340,7 +3351,9 @@ function inFollowScope(full) {
   if (!follow.sid) return typeof term === 'undefined' || !term.available(); // 只有无终端(浏览器)才全跟；桌面没绑=不跟
   const root = followScopeRoot();
   if (!root) return false;
-  return full === root || full.startsWith(root + '/');
+  const sep = state.sep || '/';
+  const normRoot = root.replace(/[\\\/]$/, '');
+  return full === normRoot || full.startsWith(normRoot + sep) || full.startsWith(normRoot + '/');
 }
 // 归属硬化：文件事件本身不带「谁写的」，靠「绑定 tab 此刻在不在干活」消歧。
 // 别的 tab 在重叠目录里写东西时，绑定 tab 多半是空闲的，于是这笔不会被误当成它的产出。

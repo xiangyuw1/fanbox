@@ -1,6 +1,6 @@
 {
   "name": "fanbox",
-  "version": "1.9.1",
+  "version": "1.9.1-fork",
   "description": "FanBox — the cockpit for vibe coding. Browse/search/preview/edit local files, command coding agents from the built-in terminal.",
   "bin": {
     "fanbox": "server.js"
@@ -10,11 +10,14 @@
     "start": "node server.js",
     "app": "electron .",
     "rebuild": "electron-rebuild -f -w node-pty",
+    "rebuild:win": "npx @electron/rebuild -f -w node-pty",
     "build:milkdown": "esbuild src-vendor/milkdown-entry.js --bundle --format=iife --minify --outfile=public/vendor/milkdown/milkdown.js --loader:.svg=dataurl --loader:.woff=file --loader:.woff2=file --loader:.ttf=file --loader:.eot=file --asset-names=[name]",
-    "build:hljs": "esbuild src-vendor/hljs-entry.js --bundle --format=iife --minify --outfile=public/vendor/hljs/highlight.js && cp node_modules/marked/marked.min.js public/vendor/marked/marked.min.js && cp node_modules/highlight.js/styles/github-dark.min.css node_modules/highlight.js/styles/github.min.css public/vendor/hljs/styles/",
-    "check:vendor-patch": "grep -q '20===e.keyCode||229===e.keyCode' public/vendor/xterm/xterm.js",
+    "build:hljs": "esbuild src-vendor/hljs-entry.js --bundle --format=iife --minify --outfile=public/vendor/hljs/highlight.js && node -e \"const fs=require('fs');fs.copyFileSync('node_modules/marked/marked.min.js','public/vendor/marked/marked.min.js');fs.copyFileSync('node_modules/highlight.js/styles/github-dark.min.css','public/vendor/hljs/styles/github-dark.min.css');fs.copyFileSync('node_modules/highlight.js/styles/github.min.css','public/vendor/hljs/styles/github.min.css')\"",
+    "check:vendor-patch": "node -e \"if(!require('fs').readFileSync('public/vendor/xterm/xterm.js','utf8').includes('20===e.keyCode||229===e.keyCode')){console.error('VENDOR PATCH MISSING');process.exit(1)}\"",
     "predist": "npm run check:vendor-patch",
-    "dist": "electron-builder --mac"
+    "predist:win": "npm run check:vendor-patch",
+    "dist": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
   },
   "build": {
     "appId": "com.huashu.fanbox",
@@ -46,6 +49,20 @@
     "dmg": {
       "title": "FanBox",
       "writeUpdateInfo": false
+    },
+    "win": {
+      "icon": "build/icon-1024.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "FanBox"
     }
   },
   "type": "commonjs",

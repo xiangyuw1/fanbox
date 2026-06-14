@@ -198,11 +198,13 @@ window.FANBOX_DICT = {
   '已在终端续上会话': 'Session resumed in terminal',
 
   // ---------- AI 整理（终端交互式）----------
-  '没找到 claude / codex 命令——AI 整理需要装其中一个 CLI': 'claude / codex command not found — AI organize needs one of these CLIs installed',
+  '没找到 claude / codex / opencode / mimo 命令——AI 整理需要装其中一个 CLI': 'claude / codex / opencode / mimo command not found — AI organize needs one of these CLIs installed',
   'AI 整理启动失败': 'Failed to launch AI organize',
   '返回': 'Back',
   'Claude 已开聊——先摊方案，你点头它才动手': 'Claude is ready — it lays out a plan first and only moves files after you approve',
   'Codex 已开聊——先摊方案，你点头它才动手': 'Codex is ready — it lays out a plan first and only moves files after you approve',
+  'OpenCode 已开聊——先摊方案，你点头它才动手': 'OpenCode is ready — it lays out a plan first and only moves files after you approve',
+  'MiMo 已开聊——先摊方案，你点头它才动手': 'MiMo is ready — it lays out a plan first and only moves files after you approve',
 
   // ---------- 发版面板 ----------
   '检查项目状态…': 'Checking project status…',

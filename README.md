@@ -40,6 +40,7 @@ Every time the agent writes a file, its card lights up — *find files → run a
 ---
 
 <a id="why-fanbox"></a>
+
 ## Why FanBox · 为什么要做 FanBox
 
 AI 帮你一个下午起十个项目，但它们散在各处、名字认不出、改了啥看不见。每天的真实流程是：Finder 里翻半天 → 切到 iTerm 启 agent → 再切浏览器看效果，三个窗口来回跳。
@@ -55,19 +56,21 @@ FanBox folds that loop into one window: **files on the left × terminal on the r
 No cloud, no remote, no accounts. Local-first, zero config, zero runtime dependencies.
 
 <a id="three-skins"></a>
+
 ## Three skins · 三套皮肤
 
 界面在 [huashu-design](https://github.com/alchaincyf/huashu-design) 辅助下完成设计，三套皮肤不是换个主题色——配色、字体、图标、代码高亮、终端 ANSI 主题整体随之变化。
 
 The UI was designed with [huashu-design](https://github.com/alchaincyf/huashu-design). The three skins are not theme-color swaps — palette, typography, icons, code highlighting and terminal ANSI themes all change together:
 
-| | |
-|---|---|
-| <img src="assets/screenshot-volt.png" alt="Volt skin / 终端皮肤"> | **终端 · Volt** · 荧光绿 × 炭黑 × 等宽字，工业仪器面板感（默认）<br>**Volt** · neon green × charcoal × monospace, industrial instrument panel (default) |
-| <img src="assets/screenshot-archive.png" alt="Archive skin / 档案皮肤"> | **档案 · Archive** · 奶油纸 × 赤陶橙 × 衬线，温暖纸感档案馆<br>**Archive** · cream paper × terracotta × serif, a warm paper archive |
-| <img src="assets/screenshot-index.png" alt="Index skin / 索引皮肤"> | **索引 · Index** · 黑白 × 信号红/绿 × 巨号字，编辑式索引日报<br>**Index** · black & white × signal red/green × oversized type, editorial index daily |
+|                                                                     |                                                                                                                                   |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="assets/screenshot-volt.png" alt="Volt skin / 终端皮肤">       | **终端 · Volt** · 荧光绿 × 炭黑 × 等宽字，工业仪器面板感（默认）<br>**Volt** · neon green × charcoal × monospace, industrial instrument panel (default) |
+| <img src="assets/screenshot-archive.png" alt="Archive skin / 档案皮肤"> | **档案 · Archive** · 奶油纸 × 赤陶橙 × 衬线，温暖纸感档案馆<br>**Archive** · cream paper × terracotta × serif, a warm paper archive                 |
+| <img src="assets/screenshot-index.png" alt="Index skin / 索引皮肤">     | **索引 · Index** · 黑白 × 信号红/绿 × 巨号字，编辑式索引日报<br>**Index** · black & white × signal red/green × oversized type, editorial index daily |
 
 <a id="what-it-does"></a>
+
 ## What it does · 能做什么
 
 ### Files · find & preview / 文件 · 找回与预览
@@ -138,6 +141,7 @@ The UI was designed with [huashu-design](https://github.com/alchaincyf/huashu-de
   All three editors intercept unsaved exits, including the Esc bypass.
 
 <a id="install"></a>
+
 ## Install · 安装
 
 ### 桌面版（推荐）/ Desktop (recommended)
@@ -148,7 +152,7 @@ Download the latest `.dmg` from [**Releases**](https://github.com/alchaincyf/fan
 
 > 已用 Apple Development 证书签名 + hardened runtime。首次打开若提示「未验证的开发者」：**右键 → 打开 → 确认**即可。  
 > Signed with an Apple Development certificate + hardened runtime. If macOS warns about an unverified developer on first launch: **right-click → Open → confirm**.
->
+> 
 > 应用内置**更新提醒**：检测到 GitHub 上有新 Release 时，右下角会弹一条提示引导下载，不强更、可对单个版本「不再提醒」。  
 > Built-in **update notifications**: when a new release lands on GitHub, a capsule appears at the bottom right. Never forced; individual versions can be muted.
 
@@ -174,14 +178,15 @@ npm run dist         # 打包签名 .dmg（产物在 dist/，不入 git）/ buil
 
 ## Shortcuts · 快捷键
 
-| 操作 / Action | 键 / Key | 操作 / Action | 键 / Key |
-|---|---|---|---|
-| 全局搜索 / Global search | `⌘K` | 用编辑器打开 / Open in editor | `⌘↵` |
-| 折叠侧栏 / Toggle sidebar | `⌘B` | 后退 / Back | `⌘[` |
-| 当前目录筛选 / Filter current folder | `/` | 打开/预览 / Open/preview | `↵` |
-| 结果上下选择 / Navigate results | `↑` `↓` | 关闭 / Close | `Esc` |
+| 操作 / Action                    | 键 / Key | 操作 / Action             | 键 / Key |
+| ------------------------------ | ------- | ----------------------- | ------- |
+| 全局搜索 / Global search           | `⌘K`    | 用编辑器打开 / Open in editor | `⌘↵`    |
+| 折叠侧栏 / Toggle sidebar          | `⌘B`    | 后退 / Back               | `⌘[`    |
+| 当前目录筛选 / Filter current folder | `/`     | 打开/预览 / Open/preview    | `↵`     |
+| 结果上下选择 / Navigate results      | `↑` `↓` | 关闭 / Close              | `Esc`   |
 
 <a id="privacy"></a>
+
 ## Privacy & security · 隐私与安全
 
 - 后端只在本机回环地址监听 + 校验 Host 头（挡 DNS rebinding），**数据不出本机**。  
@@ -196,6 +201,7 @@ npm run dist         # 打包签名 .dmg（产物在 dist/，不入 git）/ buil
   Deletions go to the system Trash (recoverable); the thumbnail cache prunes oldest-first with a 400MB cap.
 
 <a id="design"></a>
+
 ## Design & acceptance · 设计与验收
 
 界面设计在 **[huashu-design](https://github.com/alchaincyf/huashu-design)** 辅助下完成——三套皮肤的方向探索、组件质感、反 AI slop 审查都出自它的工作流。图标是档案暖色陶土箱体 + 米纸 squircle，从 SVG 一路生成到 icns。
@@ -207,39 +213,41 @@ The UI was designed with **[huashu-design](https://github.com/alchaincyf/huashu-
 Each development phase is reviewed by **5 independent subagents** playing different roles (heavy vibe coder / native-taste designer / zero-docs newcomer / ten-year terminal veteran / destructive QA), scoring the product + live screenshots + code. **Everything ships at ≥90 with zero red lines.** See `docs/05-验收角色与评分标准.md`.
 
 <a id="credits"></a>
+
 ## Standing on the shoulders of giants · 建在巨人肩膀上
 
 FanBox 的核心能力来自这些出色的开源项目：
 
 FanBox's core capabilities come from these excellent open-source projects:
 
-| 项目 / Project | 用在哪 / Used for | License |
-|---|---|---|
-| [Electron](https://www.electronjs.org/) | 桌面壳，让零依赖 Node 后端长出真实终端和原生能力<br>The desktop shell that gives a zero-dependency Node backend a real terminal and native powers | MIT |
-| [node-pty](https://github.com/microsoft/node-pty) | 伪终端，内嵌终端的「真 shell」来源<br>The pseudo-terminal behind the embedded "real shell" | MIT |
-| [xterm.js](https://xtermjs.org/) | 终端渲染（含 [addon-webgl](https://github.com/xtermjs/xterm.js) GPU 加速、addon-fit 自适应、addon-unicode11 CJK 宽字符）<br>Terminal rendering (addon-webgl GPU acceleration, addon-fit, addon-unicode11 for CJK) | MIT |
-| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 代码/JSON 编辑与 Git diff 视图，VS Code 同款内核<br>Code/JSON editing and Git diff view, the VS Code core | MIT |
-| [Milkdown](https://milkdown.dev/)（Crepe） | Markdown 所见即所得编辑<br>Markdown WYSIWYG editing | MIT |
-| [marked](https://marked.js.org/) | Markdown 预览渲染<br>Markdown preview rendering | MIT |
-| [highlight.js](https://highlightjs.org/) | 代码语法高亮<br>Syntax highlighting | BSD-3-Clause |
-| [esbuild](https://esbuild.github.io/) | 把 Milkdown 打成单文件本地 vendor，运行时保持 no-build<br>Bundling Milkdown into a single local vendor file, keeping runtime no-build | MIT |
-| [electron-builder](https://www.electron.build/) | 打包签名 dmg<br>Packaging and signing the dmg | MIT |
-| [Playwright](https://playwright.dev/) | 驱动 Electron 实拍本 README 截图 + UI 验证<br>Driving Electron for README screenshots + UI verification | Apache-2.0 |
+| 项目 / Project                                                | 用在哪 / Used for                                                                                                                                                                                   | License      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| [Electron](https://www.electronjs.org/)                     | 桌面壳，让零依赖 Node 后端长出真实终端和原生能力<br>The desktop shell that gives a zero-dependency Node backend a real terminal and native powers                                                                     | MIT          |
+| [node-pty](https://github.com/microsoft/node-pty)           | 伪终端，内嵌终端的「真 shell」来源<br>The pseudo-terminal behind the embedded "real shell"                                                                                                                     | MIT          |
+| [xterm.js](https://xtermjs.org/)                            | 终端渲染（含 [addon-webgl](https://github.com/xtermjs/xterm.js) GPU 加速、addon-fit 自适应、addon-unicode11 CJK 宽字符）<br>Terminal rendering (addon-webgl GPU acceleration, addon-fit, addon-unicode11 for CJK) | MIT          |
+| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | 代码/JSON 编辑与 Git diff 视图，VS Code 同款内核<br>Code/JSON editing and Git diff view, the VS Code core                                                                                                    | MIT          |
+| [Milkdown](https://milkdown.dev/)（Crepe）                    | Markdown 所见即所得编辑<br>Markdown WYSIWYG editing                                                                                                                                                     | MIT          |
+| [marked](https://marked.js.org/)                            | Markdown 预览渲染<br>Markdown preview rendering                                                                                                                                                      | MIT          |
+| [highlight.js](https://highlightjs.org/)                    | 代码语法高亮<br>Syntax highlighting                                                                                                                                                                    | BSD-3-Clause |
+| [esbuild](https://esbuild.github.io/)                       | 把 Milkdown 打成单文件本地 vendor，运行时保持 no-build<br>Bundling Milkdown into a single local vendor file, keeping runtime no-build                                                                          | MIT          |
+| [electron-builder](https://www.electron.build/)             | 打包签名 dmg<br>Packaging and signing the dmg                                                                                                                                                        | MIT          |
+| [Playwright](https://playwright.dev/)                       | 驱动 Electron 实拍本 README 截图 + UI 验证<br>Driving Electron for README screenshots + UI verification                                                                                                   | Apache-2.0   |
 
 所有前端依赖都 vendor 到本地（`public/vendor/`），这是「离线完全可用」的底气，也意味着上面每个项目的代码真实地跑在你机器上。谢谢它们。
 
 Every frontend dependency is vendored locally (`public/vendor/`) — that's what makes "fully usable offline" true, and it means each project above actually runs on your machine. Thank you.
 
 <a id="architecture"></a>
+
 ## Architecture · 技术架构
 
-| 层 / Layer | 用什么 / Stack |
-|---|---|
-| 后端 / Backend | 零依赖 Node.js `server.js`（文件 API + 静态服务 + 缩略图）<br>Zero-dependency Node.js `server.js` (file APIs + static serving + thumbnails) |
-| 桌面壳 / Desktop shell | Electron 33 + node-pty（asarUnpack 原生模块）<br>Electron 33 + node-pty (asarUnpack native module) |
-| 终端 / Terminal | xterm.js + WebGL + unicode11 |
-| 编辑器 / Editors | Monaco（代码）+ Milkdown Crepe（Markdown）<br>Monaco (code) + Milkdown Crepe (Markdown) |
-| 打包 / Packaging | electron-builder → 签名 arm64 .dmg<br>electron-builder → signed arm64 .dmg |
+| 层 / Layer           | 用什么 / Stack                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 后端 / Backend        | 零依赖 Node.js `server.js`（文件 API + 静态服务 + 缩略图）<br>Zero-dependency Node.js `server.js` (file APIs + static serving + thumbnails) |
+| 桌面壳 / Desktop shell | Electron 33 + node-pty（asarUnpack 原生模块）<br>Electron 33 + node-pty (asarUnpack native module)                                  |
+| 终端 / Terminal       | xterm.js + WebGL + unicode11                                                                                                  |
+| 编辑器 / Editors       | Monaco（代码）+ Milkdown Crepe（Markdown）<br>Monaco (code) + Milkdown Crepe (Markdown)                                             |
+| 打包 / Packaging      | electron-builder → 签名 arm64 .dmg<br>electron-builder → signed arm64 .dmg                                                      |
 
 <details>
 <summary>项目结构 / Project layout</summary>
@@ -276,13 +284,13 @@ fanbox/
 
 **Huashu (花叔)** — AI Native Coder, indie developer. Known for Cat Light (App Store paid chart Top 1).
 
-| 平台 / Platform | 链接 / Link |
-|------|------|
-| 🌐 官网 / Web | [bookai.top](https://bookai.top) · [huasheng.ai](https://www.huasheng.ai) |
-| 𝕏 Twitter | [@AlchainHust](https://x.com/AlchainHust) |
-| 📺 B站 / Bilibili | [花叔](https://space.bilibili.com/14097567) |
-| 📕 小红书 / Xiaohongshu | [花叔](https://www.xiaohongshu.com/user/profile/5abc6f17e8ac2b109179dfdf) |
-| 💬 公众号 / WeChat | 微信搜「花叔」 / Search "花叔" |
+| 平台 / Platform        | 链接 / Link                                                                 |
+| -------------------- | ------------------------------------------------------------------------- |
+| 🌐 官网 / Web          | [bookai.top](https://bookai.top) · [huasheng.ai](https://www.huasheng.ai) |
+| 𝕏 Twitter           | [@AlchainHust](https://x.com/AlchainHust)                                 |
+| 📺 B站 / Bilibili     | [花叔](https://space.bilibili.com/14097567)                                 |
+| 📕 小红书 / Xiaohongshu | [花叔](https://www.xiaohongshu.com/user/profile/5abc6f17e8ac2b109179dfdf)   |
+| 💬 公众号 / WeChat      | 微信搜「花叔」 / Search "花叔"                                                     |
 
 更多 AI 造物：
 
