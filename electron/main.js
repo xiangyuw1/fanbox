@@ -277,9 +277,14 @@ app.on('window-all-closed', () => {
 });
 
 // ---------- 终端 IPC（node-pty）----------
+function pwshPath() {
+  const full = 'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
+  if (fs.existsSync(full)) return full;
+  return 'powershell.exe';
+}
 ipcMain.handle('pty:spawn', (e, { id, cwd, cols, rows }) => {
   if (!pty) return { ok: false, error: 'node-pty 未编译，跑：npm run rebuild' };
-  const shellPath = process.env.SHELL || (process.platform === 'win32' ? 'pwsh.exe' : '/bin/zsh');
+  const shellPath = process.env.SHELL || (process.platform === 'win32' ? pwshPath() : '/bin/zsh');
   const startCwd = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
   // GUI 启动的 app 不继承 shell 的 locale，zsh 会把中文路径按字节转义成 \M-^@ 乱码 → 兜底 UTF-8
   const env = { ...process.env, TERM: 'xterm-256color', FANBOX: '1' };
