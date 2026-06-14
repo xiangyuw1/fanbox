@@ -128,9 +128,21 @@ function startShotWatch() {
 // 现阶段只做「检测 + 引导」：Apple Development 签名过不了 Squirrel.Mac 的校验，
 // electron-updater 全自动更新要等升级 Developer ID 后再换
 function cmpVer(a, b) {
-  const pa = String(a).replace(/^v/, '').split('.').map(Number);
-  const pb = String(b).replace(/^v/, '').split('.').map(Number);
-  for (let i = 0; i < 3; i++) { const d = (pa[i] || 0) - (pb[i] || 0); if (d) return d; }
+  const parse = (v) => {
+    const s = String(v).replace(/^v/, '');
+    const [core, pre] = s.split('-');
+    const parts = core.split('.').map(Number);
+    return { major: parts[0] || 0, minor: parts[1] || 0, patch: parts[2] || 0, pre: pre || '' };
+  };
+  const pa = parse(a), pb = parse(b);
+  if (pa.major !== pb.major) return pa.major - pb.major;
+  if (pa.minor !== pb.minor) return pa.minor - pb.minor;
+  if (pa.patch !== pb.patch) return pa.patch - pb.patch;
+  // 有 prerelease 的版本 < 无 prerelease 的同版本（1.9.1-fork < 1.9.1）
+  if (pa.pre && !pb.pre) return -1;
+  if (!pa.pre && pb.pre) return 1;
+  // 两个都有 prerelease：按字典序比较
+  if (pa.pre && pb.pre) return pa.pre.localeCompare(pb.pre);
   return 0;
 }
 const REL_PAGE = 'https://github.com/xiangyuw1/fanbox/releases/latest';
