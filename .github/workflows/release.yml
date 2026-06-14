@@ -15,7 +15,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run dist
+      - run: npm run dist -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
@@ -32,7 +32,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run dist:win
+      - run: npm run dist:win -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
       - uses: actions/upload-artifact@v4
