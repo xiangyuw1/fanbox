@@ -1,6 +1,6 @@
 {
   "name": "fanbox",
-  "version": "1.11.3-fork",
+  "version": "1.11.2-fork",
   "description": "FanBox — the cockpit for vibe coding. Browse/search/preview/edit local files, command coding agents from the built-in terminal. Supports Claude Code, Codex, OpenCode, MiMo Code agents.",
   "bin": {
     "fanbox": "server.js"
