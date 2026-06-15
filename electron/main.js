@@ -214,6 +214,12 @@ ipcMain.handle('win:focus', () => {
   win.focus();
 });
 
+// 预览全屏时藏掉左上角红黄绿系统按钮——它和右侧自家关闭图标太像，容易让人误点
+ipcMain.handle('win:traffic', (e, { show }) => {
+  if (!win || win.isDestroyed() || typeof win.setWindowButtonVisibility !== 'function') return;
+  win.setWindowButtonVisibility(!!show);
+});
+
 // 界面语言：用户手动选过的存在 ~/.fanbox/config.json（渲染层切换时写入），没选过跟随系统
 function uiLang() {
   try {

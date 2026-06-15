@@ -2,6 +2,10 @@
 
 # 📦 FanBox
 
+<img src="assets/promo-banner.jpg" alt="FanBox · Coding Agent 的驾驶舱" width="100%">
+
+<br><br>
+
 > *"AI 帮你一个下午起十个项目，然后它们就再也找不到了。FanBox 帮你把它们找回来。"*
 > *"AI spins up ten projects in an afternoon. FanBox helps you find them again."*
 
@@ -12,8 +16,8 @@
 
 <br>
 
-**vibe coding 的驾驶舱：左边文件，右边/下边终端，中间看清每一次改动。**<br>
-**The cockpit for vibe coding: browse files on the left, command agents on the right, watch every change in between.**
+**FanBox：Coding Agent 的驾驶舱。指挥 Claude Code、Codex 在本地干活，看清它碰过的每个文件、改过的每一行，随时接手。**<br>
+**FanBox — the cockpit for coding agents: command Claude Code or Codex, see every file and line they change, and take over anytime.**
 
 <br>
 

@@ -867,22 +867,75 @@ async function diskUsage(p) {
 }
 
 // 压缩包内容清单：全用系统自带工具（unzip / bsdtar / gzip），保持零依赖
+// 直接读 zip 中央目录拿文件名：按「通用位标记 bit 11 = UTF-8」决定编码，没设就按 GBK 解（中文名才不乱码）。
+// 系统 unzip/bsdtar 会先把字节转码、丢失原始编码，没法事后挽救，所以自己解。zip64/异常结构返回 null 交回退。
+async function zipNames(file, MAX) {
+  let fd;
+  try {
+    fd = await fsp.open(file, 'r');
+    const { size } = await fd.stat();
+    const tailLen = Math.min(size, 65557); // EOCD 22 字节 + 最多 65535 注释
+    const tail = Buffer.alloc(tailLen);
+    await fd.read(tail, 0, tailLen, size - tailLen);
+    let eocd = -1;
+    for (let i = tail.length - 22; i >= 0; i--) { if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; } }
+    if (eocd < 0) return null;
+    const cdCount = tail.readUInt16LE(eocd + 10);
+    const cdSize = tail.readUInt32LE(eocd + 12);
+    const cdOffset = tail.readUInt32LE(eocd + 16);
+    if (cdOffset === 0xffffffff || cdSize === 0xffffffff) return null; // zip64，超出本简单解析
+    const cd = Buffer.alloc(cdSize);
+    await fd.read(cd, 0, cdSize, cdOffset);
+    const gbk = new TextDecoder('gbk');
+    const out = [];
+    let p = 0;
+    for (let i = 0; i < cdCount && p + 46 <= cd.length; i++) {
+      if (cd.readUInt32LE(p) !== 0x02014b50) break; // central file header 签名
+      const flag = cd.readUInt16LE(p + 8);
+      const usize = cd.readUInt32LE(p + 24);
+      const nameLen = cd.readUInt16LE(p + 28);
+      const extraLen = cd.readUInt16LE(p + 30);
+      const commentLen = cd.readUInt16LE(p + 32);
+      const nameBuf = cd.subarray(p + 46, p + 46 + nameLen);
+      let nm;
+      if (flag & 0x800) nm = nameBuf.toString('utf8');
+      else { try { nm = gbk.decode(nameBuf); } catch { nm = nameBuf.toString('utf8'); } }
+      out.push({ name: nm, size: usize });
+      p += 46 + nameLen + extraLen + commentLen;
+      if (out.length > MAX) break;
+    }
+    return out;
+  } catch { return null; } // 解析失败一律交给 unzip 兜底
+  finally { if (fd) await fd.close().catch(() => {}); }
+}
+
 async function archiveList(p) {
   const file = resolvePath(p);
   try { await fsp.stat(file); } catch { return { ok: false, error: '文件不存在' }; }
   const name = path.basename(file).toLowerCase();
+  // 压缩包里的中文名常是 GBK/CP936 且没设 UTF-8 标志位，按 UTF-8 读会乱码：
+  // 拿原始字节，先严格按 UTF-8 解，失败（多半是 GBK 中文名）再回退 GBK。
+  const decodeMaybeGbk = (buf) => {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch { try { return new TextDecoder('gbk').decode(buf); } catch { return buf.toString('latin1'); } }
+  };
   const run = (cmd, args) => new Promise((resolve, reject) => {
-    execFile(cmd, args, { timeout: 15000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    execFile(cmd, args, { timeout: 15000, maxBuffer: 8 * 1024 * 1024, encoding: 'buffer' }, (err, stdout) => (err ? reject(err) : resolve(decodeMaybeGbk(stdout))));
   });
   const MAX = 800;
   const entries = [];
   try {
     if (/\.(zip|jar)$/.test(name)) {
-      const out = await run('unzip', ['-l', '--', file]);
-      for (const line of out.split('\n')) {
-        const m = line.match(/^\s*(\d+)\s+\S+\s+\S+\s+(.+)$/);
-        if (m) entries.push({ name: m[2], size: Number(m[1]) });
-        if (entries.length > MAX) break;
+      const parsed = await zipNames(file, MAX); // 自读中央目录，中文名按 GBK/UTF-8 正确解（unzip 会乱码）
+      if (parsed) {
+        entries.push(...parsed);
+      } else { // zip64 / 异常结构本解析器够不着：回退 unzip（名字可能乱码，但至少列得出）
+        const out = await run('unzip', ['-l', '--', file]);
+        for (const line of out.split('\n')) {
+          const m = line.match(/^\s*(\d+)\s+\S+\s+\S+\s+(.+)$/);
+          if (m) entries.push({ name: m[2], size: Number(m[1]) });
+          if (entries.length > MAX) break;
+        }
       }
     } else if (/\.(tar|tgz|tbz2?|txz)$/.test(name) || /\.tar\.(gz|bz2|xz|zst)$/.test(name)) {
       const out = await run('tar', ['-tf', file]); // bsdtar 自动识别压缩格式

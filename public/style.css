@@ -521,6 +521,9 @@ kbd {
 #preview-resizer:hover::after, #preview-resizer.dragging::after,
 #terminal-resizer:hover::after, #terminal-resizer.dragging::after { opacity: 0.55; }
 .pv-img { cursor: zoom-in; }
+/* 图片全屏：在窗口中居中，并整图缩放到铺满可视区（约束 max-height 避免 flex 居中把高图顶部裁掉） */
+#preview.is-max .preview-body:has(> .pv-img) { display: flex; align-items: center; justify-content: center; }
+#preview.is-max .preview-body > .pv-img { max-height: 100%; }
 /* 透明图垫棋盘格，白色/透明 PNG 也能看清边界 */
 .grid .item .icon .thumb, .pv-img, .lightbox img, .list .row .icon .thumb-sm {
   background: repeating-conic-gradient(color-mix(in srgb, var(--text) 11%, transparent) 0% 25%, transparent 0% 50%) 0 0 / 14px 14px, var(--bg-3);
@@ -654,6 +657,7 @@ kbd {
 .editor-bar button.primary:hover { filter: brightness(1.06); }
 .editor-bar button.ghost-btn { color: var(--text-dim); }
 .editor-bar button.ghost-btn:hover { color: var(--text); border-color: var(--accent); }
+.editor-bar button:disabled { opacity: 0.32; cursor: default; pointer-events: none; }
 .editor-hint { font-size: 11px; color: var(--text-faint); margin-left: auto; }
 .editor-area {
   width: 100%; box-sizing: border-box; min-height: 60vh; resize: vertical;
@@ -882,6 +886,9 @@ kbd {
    app-region:drag 区域收不到滚轮事件——整栏 drag 会让滚动时灵时卡（#6 的方案回退）。
    拖窗用品牌区和顶栏，足够顺手 */
 .desktop #topbar button, .desktop #topbar .breadcrumb, .desktop #topbar .seg, .desktop #topbar .toggle, .desktop #topbar input { -webkit-app-region: no-drag; }
+/* 预览全屏时顶栏被盖住，但它的 drag 区域是 OS 级遮罩、不认 z-index，会吞掉压在它上面的预览按钮的点击。
+   全屏期间把顶栏/品牌区的拖拽关掉，让预览自己的按钮可点（全屏本就不需要拖这条顶栏）。 */
+.desktop.preview-maxed #topbar, .desktop.preview-maxed .brand { -webkit-app-region: no-drag; }
 
 /* 终端头：跟随/定位 文字按钮 */
 .term-actions #file-follow, .term-actions #term-locate { font-size: 11px; padding: 3px 8px; font-family: var(--font-ui); }
