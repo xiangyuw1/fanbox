@@ -11,6 +11,21 @@
 
 ## [Unreleased]
 
+## [1.11.2-fork] - 2026-06-15
+
+### Added
+- **OpenCode / MiMo Code agent 支持**：AI 整理、项目记忆、skills 透视、agent 用量全面支持 OpenCode 和 MiMo Code 作为可选引擎
+- **Windows 构建适配**：完整的 Windows 平台支持，包括 PowerShell 7 集成、磁盘驱动器识别、路径适配
+- **prerelease 版本号支持**：cmpVer 正确处理 fork 版本号（如 1.11.2-fork），不会误报更新
+
+### Changed
+- 版本号更新至 1.11.2-fork，基于上游 v1.11.3 合并
+- 保留所有 fork 特性同时整合上游最新功能和修复
+
+### Fixed
+- 从上游合并后恢复 OpenCode/MiMo Code agent 完整支持
+- 从上游合并后恢复 Windows 平台完整适配
+
 ## [1.11.0] - 2026-06-13
 
 ### Added
