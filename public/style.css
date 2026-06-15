@@ -6,6 +6,8 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", "Inter", sans-serif;
   --font-display: var(--font-ui);
   --font-mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", monospace;
+  /* 内嵌终端字体：优先用户装的 Nerd Font（starship/powerline 字形才不变 tofu），没装回退系统等宽 */
+  --font-term: "JetBrainsMono Nerd Font", "MesloLGS NF", "FiraCode Nerd Font", "Hack Nerd Font", "Symbols Nerd Font Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-fname: var(--font-ui);
 }
 
@@ -94,6 +96,8 @@ body {
 /* 折叠：侧栏退出栅格 + 单列让主区铺满（JS applyLayout 也会内联同值，双保险） */
 #app.sidebar-collapsed { grid-template-columns: 1fr; }
 #app.sidebar-collapsed > #sidebar { display: none; }
+/* 折叠后顶栏贴到窗口左缘，给 macOS 红绿灯让位 */
+#app.sidebar-collapsed #topbar { padding-left: 80px; }
 
 /* ---------- 侧边栏 ---------- */
 #sidebar {
@@ -209,6 +213,8 @@ kbd {
 .breadcrumb::-webkit-scrollbar { display: none; }
 .breadcrumb .crumb { padding: 4px 7px; border-radius: 6px; cursor: pointer; color: var(--text-dim); white-space: nowrap; }
 .breadcrumb .crumb:hover { background: var(--bg-3); color: var(--text); }
+/* 图标（电脑/时钟）默认 baseline 对齐会偏高，改 middle 与同行文字居中 */
+.breadcrumb .crumb svg { vertical-align: middle; }
 /* 当前目录高亮，一眼识别文件面板真正所在 */
 .breadcrumb .crumb.last { color: var(--accent); font-weight: 700; background: var(--accent-soft); padding-right: 9px; }
 .breadcrumb .sep { color: var(--text-faint); }

@@ -11,20 +11,46 @@
 
 ## [Unreleased]
 
-## [1.11.2-fork] - 2026-06-15
+## [1.11.3-fork] - 2026-06-15
 
 ### Added
 - **OpenCode / MiMo Code agent 支持**：AI 整理、项目记忆、skills 透视、agent 用量全面支持 OpenCode 和 MiMo Code 作为可选引擎
 - **Windows 构建适配**：完整的 Windows 平台支持，包括 PowerShell 7 集成、磁盘驱动器识别、路径适配
-- **prerelease 版本号支持**：cmpVer 正确处理 fork 版本号（如 1.11.2-fork），不会误报更新
+- **prerelease 版本号支持**：cmpVer 正确处理 fork 版本号（如 1.11.3-fork），不会误报更新
 
 ### Changed
-- 版本号更新至 1.11.2-fork，基于上游 v1.11.3 合并
+- 版本号更新至 1.11.3-fork，基于上游 v1.11.3 合并
 - 保留所有 fork 特性同时整合上游最新功能和修复
 
 ### Fixed
 - 从上游合并后恢复 OpenCode/MiMo Code agent 完整支持
 - 从上游合并后恢复 Windows 平台完整适配
+- 上游 v1.11.1-1.11.3 所有修复已整合
+
+## [1.11.3] - 2026-06-15
+
+### Fixed
+- **终端里目录路径不可点击**：带斜杠的路径靠服务端 stat 验证才划线，而裸文件名（`xxx.md`）有扩展名白名单免验证直接划线、点开再按文件名搜索兜底。当终端 cwd 与打印的相对路径基准不一致时（agent 常这样），文件靠裸名兜底照样可点，目录没扩展名享受不到兜底，于是只显蓝不可点。现在结尾 `/` 的目录候选也享受同等兜底（验证过用精确路径，验证不过保留链接走 basename 搜索），并修了 `openTermPath` 对 `dir/` 取 basename 得空串导致搜不到的问题。
+- **面包屑电脑图标偏高**：内联 SVG 默认 `vertical-align: baseline` 会顶到文字基线上方，改 `middle` 与同行文字居中（顺带修了「最近修改」的时钟图标）。
+- **终端无法用鼠标选中文字**：claude/codex 等 TUI 开启鼠标上报后会吃掉拖拽，mac 上必须开 `macOptionClickForcesSelection` 才能强制选中，旧配置没开导致一点都选不了。现在按住 Option 拖拽即可选中复制（iTerm/VS Code 终端同款约定）。
+
+## [1.11.2] - 2026-06-14
+
+### Fixed
+- **HTML 预览里本地图片裂图**：不同 coding agent 生成的 html 引图方式各异，`file://` 绝对 URL 和 `/Users` 裸绝对路径在 http 预览（沙箱 iframe）里都加载不了。现在预览会自动把图片引用兜底到 `/fs` 镜像端点——`file://` 主动改写（这类永远加载不了，改了只会帮忙），其余绝对路径仅在加载失败时才兜底重写（对本来能加载的相对/远程/data 引用零影响），真缺失的文件不会被假装修好。覆盖 `src` / `href` / `poster` 和内联 style 的 `background:url(file://…)`
+
+
+
+### Added
+- 内嵌终端字体优先使用系统已装的 **Nerd Font**（JetBrainsMono / MesloLGS / FiraCode / Hack / Symbols Nerd Font），让 Starship、powerline 等主题的图标和箭头正常显示，不再是方块 tofu
+
+### Changed
+- 内嵌终端改用 **login shell** 启动（`zsh -l`），会读取 `~/.zprofile` / `~/.zlogin` 里配的 PATH，解决「普通终端能找到 `claude`、FanBox 内嵌终端却找不到」
+- 删除顶栏「← 后退 / ↑ 上一级」两个按钮：和面包屑导航功能重复，且收起侧栏时与 macOS 红绿灯重叠。后退 / 上一级保留 `⌘[` 和 `Backspace` 快捷键
+- 收起侧栏时顶栏内容右移，给 macOS 红绿灯让位
+
+### Fixed
+- 加固：FanBox 访问自己的 localhost 后端时显式给 loopback 加代理旁路，避免 clash 强制系统代理、企业 PAC 等场景把本地请求拦成 502，导致整个界面白屏
 
 ## [1.11.0] - 2026-06-13
 
